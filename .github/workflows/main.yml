@@ -1,9 +1,12 @@
-name: Save FanCode Source Code
+name: FanCode M3U Playlist Generator
 
 on:
   workflow_dispatch: # ম্যানুয়ালি রান করার অপশন
   schedule:
-    - cron: '0 */6 * * *' # প্রতি ৬ ঘণ্টা পর পর অটো রান হবে (প্রয়োজনমতো বদলাতে পারেন)
+    - cron: '0 */6 * * *' # প্রতি ৬ ঘণ্টা পর পর অটো রান হবে
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -26,13 +29,13 @@ jobs:
       - name: Install Playwright Browsers
         run: playwright install chromium
 
-      - name: Run Source Scraper
+      - name: Run Playlist Generator Script
         run: python main.py
 
-      - name: Commit and Push HTML Source File
+      - name: Commit and Push Generated M3U Files
         run: |
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "actions@github.com"
-          git add fancode_source.html
-          git commit -m "Auto-update FanCode HTML source code" || echo "No changes to commit"
+          git add "All Live Match/" || true
+          git commit -m "Auto-update FanCode Live M3U playlists" || echo "No changes to commit"
           git push
