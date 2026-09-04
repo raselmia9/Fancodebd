@@ -1,96 +1,76 @@
 import asyncio
 import os
 from playwright.async_api import async_playwright
-from datetime import datetime
 
-def write_status(message, is_error=False):
-    status_type = "ERROR" if is_error else "SUCCESS"
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    log_text = f"[{timestamp}] [{status_type}] {message}\n"
-    
-    with open("status.txt", "w", encoding="utf-8") as f:
-        f.write(log_text)
-    print(log_text)
-
-async def generate_playlist():
-    url = "https://www.fancode.com/bd/live-now/all-sports"
-    
+async def main():
     async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=True,
-            args=["--disable-blink-features=AutomationControlled", "--no-sandbox"]
-        )
+        # ব্রাউজার চালু করা
+        browser = await p.chromium.launch(headless=True)
         
-        # ফ্যানকোডের জন্য পুরোপুরি বাংলাদেশি পরিচয়ে ব্রাউজার কনটেক্সট তৈরি
+        # বাংলাদেশ লোকেশন এবং ইউজার-এজেন্ট সেট করা
         context = await browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            viewport={"width": 1366, "height": 768},
-            locale="en-BD",                  # বাংলাদেশ রিজিয়ন লোকাল
-            timezone_id="Asia/Dhaka",        # ঢাকার টাইমজোন
-            geolocation={"latitude": 23.8103, "longitude": 90.4125}, # ঢাকার ল্যাটিটিউড ও লংগিটিউড
-            permissions=["geolocation"],     # লোকেশন পারমিশন এলাও করা
-            extra_http_headers={
-                "Accept-Language": "en-BD,en;q=0.9,bn;q=0.8"
-            }
+            locale="bn-BD",
+            timezone_id="Asia/Dhaka"
         )
         
         page = await context.new_page()
+        print("FanCode লাইভ পেজে প্রবেশ করা হচ্ছে...")
         
         try:
-            print(f"[*] Navigating to Bangladeshi Live Page: {url}")
-            await page.goto(url, timeout=60000, wait_until="networkidle")
-            await asyncio.sleep(6) # পেজ পুরোপুরি লোড হওয়ার জন্য অপেক্ষা
-            
-            # পেজ স্ক্রোল করা যাতে ডাইনামিক কন্টেন্টগুলো সামনে চলে আসে
-            await page.evaluate("window.scrollTo(0, 500)")
-            await asyncio.sleep(3)
-            
-            # পেজ থেকে সব হাইপারলিংক সংগ্রহ করা
-            links = await page.locator("a").all()
-            
-            m3u_content = "#EXTM3U\n"
-            saved_count = 0
-            seen_urls = set()
-            
-            for link in links:
-                try:
-                    href = await link.get_attribute("href")
-                    if not href:
-                        continue
-                        
-                    if "/match/" in href or "live-events" in href:
-                        full_url = href if href.startswith("http") else f"https://www.fancode.com{href}"
-                        
-                        if full_url not in seen_urls:
-                            card_text = await link.inner_text()
-                            
-                            # যদি ম্যাচ কার্ডে LIVE ট্যাগ থাকে
-                            if "LIVE" in card_text.upper():
-                                seen_urls.add(full_url)
-                                
-                                lines = [line.strip() for line in card_text.split("\n") if line.strip()]
-                                match_title = " vs ".join(lines[:2]) if len(lines) >= 2 else "Live Match"
-                                
-                                m3u_content += f'#EXTINF:-1 tvg-logo="" group-title="FanCode Live (BD)", {match_title}\n'
-                                m3u_content += f'{full_url}\n'
-                                saved_count += 1
-                                print(f"[+] Found Live Match: {match_title}")
-                except Exception:
-                    continue
-                    
-            output_file = "playlist.m3u"
-            with open(output_file, "w", encoding="utf-8") as f:
-                f.write(m3u_content)
-                
-            if saved_count > 0:
-                write_status(f"Successfully generated playlist.m3u with {saved_count} live matches.")
-            else:
-                write_status("No live matches found currently on the page.", is_error=False)
-                
+            await page.goto("https://www.fancode.com/bd/live-now/all-sports", timeout=60000)
+            await page.wait_for_selector("a[href*='/match/']", timeout=15000)
         except Exception as e:
-            write_status(f"Exception occurred: {str(e)}", is_error=True)
-        finally:
+            print(f"পেজ লোড হতে সমস্যা হয়েছে: {e}")
             await browser.close()
+            return
+
+        # পেজ একটু স্ক্রোল করা যাতে সব কার্ড লোড হয়
+        await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        await asyncio.sleep(3)
+
+        # কার্ড থেকে লোগো এবং ম্যাচ টাইটেল সংগ্রহ করা
+        matches = await page.evaluate('''() => {
+            const matchCards = [];
+            const cards = document.querySelectorAll('a[href*="/match/"]');
+            
+            cards.forEach(card => {
+                const titleElement = card.querySelector('div, span');
+                const imgElement = card.querySelector('img');
+                
+                const title = titleElement ? titleElement.innerText.trim() : "Live Match";
+                const logo = imgElement ? imgElement.src : "";
+                
+                if (title && !matchCards.some(m => m.title === title)) {
+                    matchCards.push({ title, logo });
+                }
+            });
+            
+            return matchCards;
+        }''')
+
+        await browser.close()
+
+        # m3u ফাইল কন্টেন্ট তৈরি
+        m3u_content = "#EXTM3U\n"
+        
+        if not matches:
+            print("কোনো লাইভ ম্যাচ কার্ড পাওয়া যায়নি!")
+            return
+
+        for match in matches:
+            title = match['title'].replace('\n', ' - ')
+            logo = match['logo']
+            
+            m3u_content += f'#EXTINF:-1 tvg-logo="{logo}" group-title="FanCode Live",{title}\n'
+            m3u_content += f'https://www.fancode.com\n'
+
+        # ফাইল সেভ করা (আপনার প্রজেক্টের রিকোয়ারমেন্ট অনুযায়ী ফাইলের নাম দিতে পারেন)
+        output_filename = "Modified_DaddyLive_Playlist.m3u"
+        with open(output_filename, "w", encoding="utf-8") as f:
+            f.write(m3u_content)
+
+        print(f"সফলভাবে '{output_filename}' ফাইল আপডেট করা হয়েছে!")
 
 if __name__ == "__main__":
-    asyncio.run(generate_playlist())
+    asyncio.run(main())
