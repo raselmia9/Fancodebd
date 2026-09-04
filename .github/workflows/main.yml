@@ -1,0 +1,30 @@
+name: FanCode Live Scraper
+
+on:
+  workflow_dispatch: # ম্যানুয়ালি রান করার অপশন
+  schedule:
+    - cron: '*/30 * * * *' # প্রতি ৩০ মিনিট পর পর নিজে নিজেই রান করবে (প্রয়োজনমতো পরিবর্তন করতে পারেন)
+
+jobs:
+  run-scraper:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Playwright Browsers
+        run: playwright install chromium
+
+      - name: Run Scraper Script
+        run: python main.py
