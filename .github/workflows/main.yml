@@ -1,12 +1,12 @@
-name: FanCode Live Scraper
+name: Save FanCode Source Code
 
 on:
   workflow_dispatch: # ম্যানুয়ালি রান করার অপশন
   schedule:
-    - cron: '*/30 * * * *' # প্রতি ৩০ মিনিট পর পর নিজে নিজেই রান করবে (প্রয়োজনমতো পরিবর্তন করতে পারেন)
+    - cron: '0 */6 * * *' # প্রতি ৬ ঘণ্টা পর পর অটো রান হবে (প্রয়োজনমতো বদলাতে পারেন)
 
 jobs:
-  run-scraper:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,5 +26,13 @@ jobs:
       - name: Install Playwright Browsers
         run: playwright install chromium
 
-      - name: Run Scraper Script
+      - name: Run Source Scraper
         run: python main.py
+
+      - name: Commit and Push HTML Source File
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          git add fancode_source.html
+          git commit -m "Auto-update FanCode HTML source code" || echo "No changes to commit"
+          git push
