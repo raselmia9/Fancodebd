@@ -1,8 +1,8 @@
-name: Generate Playlist & Status
+name: FanCode Live Playlist Generator
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '*/30 * * * *' # প্রতি ৩০ মিনিট পর পর অটো রান হবে
   workflow_dispatch:
 
 jobs:
@@ -23,6 +23,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    - name: Install Playwright Browsers
+      run: playwright install chromium
+
     - name: Run Playlist Generator Script
       run: python main.py
 
@@ -31,5 +34,5 @@ jobs:
         git config --global user.name "GitHub Action"
         git config --global user.email "action@github.com"
         git add playlist.m3u status.txt
-        git commit -m "Auto-update playlist.m3u and execution status" || exit 0
+        git commit -m "Auto-update playlist.m3u and status [skip ci]" || exit 0
         git push
