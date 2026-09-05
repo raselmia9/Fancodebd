@@ -10,7 +10,7 @@ const fs = require('fs');
         statusLog += message + '\n';
     };
 
-    writeStatus("Starting FanCode Link Extractor...");
+    writeStatus("Starting FanCode Link Extractor with Full Mobile Simulation...");
 
     const browser = await puppeteer.launch({
         headless: true,
@@ -20,22 +20,29 @@ const fs = require('fs');
             '--disable-dev-shm-usage',
             '--disable-accelerated-2d-canvas',
             '--disable-gpu',
-            '--window-size=1920,1080'
+            '--window-size=412,915'
         ]
     });
 
-    const page = await browser.newPage();
+    const context = await browser.createBrowserContext();
+    const page = await context.newPage();
 
-    // মোবাইল ডিভাইসের ভিউপোর্ট ও ইউজার এজেন্ট সেট করা
-    await page.setUserAgent('Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36');
-    await page.setViewport({ width: 412, height: 915, isMobile: true });
+    // পারফেক্ট মোবাইল ভিউ এবং টাচ সাপোর্ট সেট করা
+    await page.setUserAgent('Mozilla/5.0 (Linux; Android 13; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36');
+    await page.setViewport({
+        width: 412,
+        height: 915,
+        deviceScaleFactor: 2.625,
+        isMobile: true,
+        hasTouch: true
+    });
 
-    // নেটওয়ার্ক রিকোয়েস্ট থেকে যেকোনো .m3u8 লিংক ফিল্টার করে ক্যাপচার করা
+    // নেটওয়ার্ক রিকোয়েস্ট থেকে যেকোনো .m3u8 লিংক বা স্ট্রিম রিলেটেড রিকোয়েস্ট ধরা
     page.on('request', (request) => {
         const url = request.url();
         const lowerUrl = url.toLowerCase();
         
-        // এখানে শুধু .m3u8 থাকলেই সেটি ক্যাচ করবে (সব রেজুলেশন বা কোয়ালিটির লিংকসহ)
+        // .m3u8 এক্সটেনশনযুক্ত যেকোনো লিংক (মাস্টার বা রেজুলেশনভিত্তিক) ক্যাপচার করা
         if (lowerUrl.includes('.m3u8')) {
             if (!capturedLinks.has(url)) {
                 capturedLinks.add(url);
@@ -49,35 +56,40 @@ const fs = require('fs');
         writeStatus(`Navigating to: ${targetUrl}`);
 
         await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
-        writeStatus("Page loaded successfully.");
+        writeStatus("Mobile page loaded successfully.");
 
-        // পেজের টিম নাম ভেরিফিকেশন চেক করা
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        const matchTitle = await page.evaluate(() => {
-            const titleElement = document.querySelector('h1') || document.querySelector('div[class*="match"]');
-            return titleElement ? titleElement.innerText : "Match title not found";
-        });
-        writeStatus(`[MATCH INFO]: ${matchTitle.replace(/\n/g, ' - ')}`);
+        // পেজ রেন্ডার হওয়ার জন্য সময় দেওয়া
+        await new Promise(resolve => setTimeout(resolve, 6000));
 
-        // ভিডিও প্লে বা ট্রিগার করার জন্য কমান্ড পাঠানো
-        writeStatus("Triggering video playback...");
+        // মোবাইল ভিউতে স্ক্রিন স্ক্রোল করা এবং ভিডিও প্লেয়ার ট্রিগার করা
+        writeStatus("Simulating mobile touch and video play actions...");
         await page.evaluate(() => {
-            const videoElements = document.querySelectorAll('video');
-            videoElements.forEach(v => v.play().catch(e => {}));
+            // পে একটু নিচে স্ক্রোল করা যাতে প্লেয়ার ফোকাসে আসে
+            window.scrollBy(0, 300);
 
-            // পেজের প্লে বাটনগুলোতে ক্লিক করার চেষ্টা
-            const clickables = document.querySelectorAll('button, div, span');
-            clickables.forEach(el => {
-                if (el.innerText && (el.innerText.toLowerCase().includes('watch') || el.innerText.toLowerCase().includes('play') || el.innerText.toLowerCase().includes('live'))) {
-                    try { el.click(); } catch(err) {}
+            // ভিডিও এলিমেন্ট প্লে করা
+            const videos = document.querySelectorAll('video');
+            videos.forEach(v => {
+                v.muted = true;
+                v.play().catch(e => {});
+            });
+
+            // ফ্যানকোডের মোবাইল ইন্টারফেসে প্লে বাটন বা ভিডিও কন্টেইনারে ক্লিক সিমুলেট করা
+            const clickableElements = document.querySelectorAll('button, div, span, img');
+            clickableElements.forEach(el => {
+                const text = el.innerText ? el.innerText.toLowerCase() : '';
+                if (text.includes('play') || text.includes('watch') || text.includes('live') || el.className.includes('play')) {
+                    try {
+                        el.click();
+                    } catch (err) {}
                 }
             });
         });
 
-        // ভিডিও প্লে হওয়ার পর সমস্ত লিংকের জন্য ৩০ থেকে ৪০ সেকেন্ড অপেক্ষা করা
-        writeStatus("Waiting 40 seconds for all stream resolutions to capture...");
-        await new Promise(resolve => setTimeout(resolve, 40000));
-        writeStatus("Waiting period completed.");
+        // সমস্ত রেজুলেশন ও সাব-স্ট্রিম লোড হওয়ার জন্য পর্যাপ্ত সময় (৫০ সেকেন্ড) অপেক্ষা
+        writeStatus("Waiting 50 seconds to capture all resolution streams...");
+        await new Promise(resolve => setTimeout(resolve, 50000));
+        writeStatus("Extraction monitoring finished.");
 
     } catch (error) {
         writeStatus(`[ERROR]: ${error.message}`);
@@ -85,10 +97,9 @@ const fs = require('fs');
         await browser.close();
         writeStatus("Browser closed.");
 
-        // স্ট্যাটাস ফাইলে শুধু ক্যাপচার হওয়া .m3u8 লিংকগুলোর পরিষ্কার তালিকা তৈরি করা
         statusLog += `\n--- All Captured M3U8 Links (${capturedLinks.size}) ---\n`;
         if (capturedLinks.size === 0) {
-            statusLog += "No .m3u8 links captured in this run.\n";
+            statusLog += "No .m3u8 links captured.\n";
         } else {
             let index = 1;
             capturedLinks.forEach(link => {
