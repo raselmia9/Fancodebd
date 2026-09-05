@@ -1,15 +1,14 @@
 === FanCode Extraction Status Log ===
-Time: 2026-09-05T14:53:32.873Z
+Time: 2026-09-05T15:02:48.896Z
 
-Starting FanCode Link Extractor...
+Starting FanCode Link Extractor with Full Mobile Simulation...
 Navigating to: https://www.fancode.com/bd/football/tour/efl-championship-2026-27-19769090/matches/football-4247483/live-match-info
-[FOUND M3U8 LINK]: https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788620134~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/*~id=172.185.150.242_4247483_ef29bff4-e9f1-4e~data=172.185.150.242_4247483_free_175~hmac=1e8c1281e9fe7bd5fa9641bf74b349a92e8db0e03aa8e14881adc6efbc9b25cf&deviceId=undefined&advertiserId=undefined&ft_type=c1
-Page loaded successfully.
-[MATCH INFO]: Burnley vs Bristol City F.C. Match 16 Live Match Streaming & Information: EFL Championship 2026-27
-Triggering video playback...
-Waiting 40 seconds for all stream resolutions to capture...
-Waiting period completed.
+Mobile page loaded successfully.
+[FOUND M3U8 LINK]: https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788620690~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/*~id=57.154.4.41_4247483_b1b5718a-e583-45~data=57.154.4.41_4247483_free_175~hmac=faefddfdef5e66cde5aaf6656bf94e876406185e4ff2d3e92cb8a149ed45ae72&deviceId=undefined&advertiserId=undefined&ft_type=c1
+Simulating mobile touch and video play actions...
+Waiting 50 seconds to capture all resolution streams...
+Extraction monitoring finished.
 Browser closed.
 
 --- All Captured M3U8 Links (1) ---
-1. https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788620134~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/*~id=172.185.150.242_4247483_ef29bff4-e9f1-4e~data=172.185.150.242_4247483_free_175~hmac=1e8c1281e9fe7bd5fa9641bf74b349a92e8db0e03aa8e14881adc6efbc9b25cf&deviceId=undefined&advertiserId=undefined&ft_type=c1
+1. https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788620690~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/*~id=57.154.4.41_4247483_b1b5718a-e583-45~data=57.154.4.41_4247483_free_175~hmac=faefddfdef5e66cde5aaf6656bf94e876406185e4ff2d3e92cb8a149ed45ae72&deviceId=undefined&advertiserId=undefined&ft_type=c1
