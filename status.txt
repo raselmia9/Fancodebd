@@ -1,25 +1,24 @@
 === FanCode Resolution Extraction Log ===
-Time: 2026-09-05T15:45:58.276Z
+Time: 2026-09-05T16:55:02.616Z
 
 Starting FanCode Player Visibility Extractor...
 Navigating to: https://www.fancode.com/bd/football/tour/efl-championship-2026-27-19769090/matches/football-4247483/live-match-info
-[FOUND STREAM LINK]: https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788623279~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/*~id=52.173.162.33_4247483_c9e90611-c5c7-4c~data=52.173.162.33_4247483_free_175~hmac=22aa3349ff4dee963ae6a0e0d1a8cdba3e458c6a52beb86f1daaf75d525e617a&deviceId=undefined&advertiserId=undefined&ft_type=c1
 Mobile page loaded successfully.
 Waiting for the top video player element to become visible...
 Video player detected and visible on attempt 1!
 Interacting with the video player elements...
 Waiting 90 seconds for all resolution streams to trigger...
-Monitoring playback... (10s elapsed, captured links: 1)
-Monitoring playback... (20s elapsed, captured links: 1)
-Monitoring playback... (30s elapsed, captured links: 1)
-Monitoring playback... (40s elapsed, captured links: 1)
-Monitoring playback... (50s elapsed, captured links: 1)
-Monitoring playback... (60s elapsed, captured links: 1)
-Monitoring playback... (70s elapsed, captured links: 1)
-Monitoring playback... (80s elapsed, captured links: 1)
-Monitoring playback... (90s elapsed, captured links: 1)
+Monitoring playback... (10s elapsed, captured links: 0)
+Monitoring playback... (20s elapsed, captured links: 0)
+Monitoring playback... (30s elapsed, captured links: 0)
+Monitoring playback... (40s elapsed, captured links: 0)
+Monitoring playback... (50s elapsed, captured links: 0)
+Monitoring playback... (60s elapsed, captured links: 0)
+Monitoring playback... (70s elapsed, captured links: 0)
+Monitoring playback... (80s elapsed, captured links: 0)
+Monitoring playback... (90s elapsed, captured links: 0)
 Extraction monitoring finished.
 Browser closed.
 
---- All Captured Stream Links (1) ---
-1. https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788623279~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/*~id=52.173.162.33_4247483_c9e90611-c5c7-4c~data=52.173.162.33_4247483_free_175~hmac=22aa3349ff4dee963ae6a0e0d1a8cdba3e458c6a52beb86f1daaf75d525e617a&deviceId=undefined&advertiserId=undefined&ft_type=c1
+--- All Captured Stream Links (0) ---
+No stream links captured in this run.
