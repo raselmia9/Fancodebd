@@ -10,7 +10,7 @@ const fs = require('fs');
         statusLog += message + '\n';
     };
 
-    writeStatus("Starting FanCode Direct Stream Extractor...");
+    writeStatus("Starting FanCode Deep Stream Extractor...");
 
     const browser = await puppeteer.launch({
         headless: true,
@@ -26,7 +26,7 @@ const fs = require('fs');
 
     const page = await browser.newPage();
 
-    // মোবাইল ডিভাইসের রিয়েল ভিউপোর্ট ও ইউজার এজেন্ট সেট করা
+    // মোবাইল ডিভাইসের রিয়েল ভিউপোর্ট ও ইউজার এজেন্ট
     await page.setUserAgent('Mozilla/5.0 (Linux; Android 13; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36');
     await page.setViewport({
         width: 412,
@@ -36,12 +36,11 @@ const fs = require('fs');
         hasTouch: true
     });
 
-    // ব্রাউজারের নেটওয়ার্ক থেকে সরাসরি .m3u8 বা স্ট্রিম রিলেটেড যেকোনো লিংক রিয়েল-টাইমে ক্যাপচার করা
+    // নেটওয়ার্কের সমস্ত m3u8 লিংক রিয়েল-টাইমে ট্র্যাক করা (মাস্টার এবং সাব-রেজুলেশন উভয়ই)
     page.on('request', (request) => {
         const url = request.url();
         const lowerUrl = url.toLowerCase();
         
-        // ফ্যানকোডের স্ট্রিম বা প্লেলিস্ট লিংকগুলো ফিল্টার করা
         if (lowerUrl.includes('.m3u8')) {
             if (!capturedLinks.has(url)) {
                 capturedLinks.add(url);
@@ -57,34 +56,50 @@ const fs = require('fs');
         await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
         writeStatus("Mobile page loaded successfully.");
 
-        // পেজ ও প্লেয়ার পুরোপুরি রেডি হওয়ার জন্য ৮ সেকেন্ড অপেক্ষা
-        await new Promise(resolve => setTimeout(resolve, 8000));
+        // প্লেয়ার পুরোপুরি ইনিশিয়ালাইজ হওয়ার জন্য ১০ সেকেন্ড অপেক্ষা
+        await new Promise(resolve => setTimeout(resolve, 10000));
 
-        // ভিডিও প্লেয়ার ট্রিগার করার জন্য স্ক্রোল এবং ক্লিক সিমুলেশন
-        writeStatus("Simulating mobile touch and video play actions...");
-        await page.evaluate(() => {
-            window.scrollBy(0, 300);
+        writeStatus("Executing deep interaction to force video playback...");
+        
+        // ভিডিও প্লে করার জন্য বিভিন্ন পজিশনে ক্লিক এবং প্লে কমান্ড সিমুলেশন
+        await page.evaluate(async () => {
+            window.scrollBy(0, 400);
             
-            // ভিডিও এলিমেন্ট প্লে করার চেষ্টা
+            // ভিডিও ট্যাগগুলো ফোর্স প্লে করা
             const videos = document.querySelectorAll('video');
             videos.forEach(v => {
                 v.muted = true;
                 v.play().catch(e => {});
             });
 
-            // সম্ভাব্য প্লে বাটন বা লাইভ স্ট্রিম ওভারলেতে ক্লিক করা
-            const clickableElements = document.querySelectorAll('button, div, span, img');
-            clickableElements.forEach(el => {
+            // ফ্যানকোডের প্লে বাটন বা ভিডিও কন্টেইনারে ক্লিক সিমুলেট করা
+            const potentialPlayButtons = document.querySelectorAll('button, div, span, a');
+            potentialPlayButtons.forEach(el => {
                 const text = el.innerText ? el.innerText.toLowerCase() : '';
-                if (text.includes('play') || text.includes('watch') || text.includes('live') || el.className.includes('play')) {
-                    try { el.click(); } catch (err) {}
+                const className = el.className ? typeof el.className === 'string' ? el.className.toLowerCase() : '' : '';
+                
+                if (text.includes('play') || text.includes('watch') || text.includes('live') || className.includes('play') || className.includes('video')) {
+                    try {
+                        el.click();
+                    } catch (err) {}
                 }
             });
         });
 
-        // ব্রাউজারে ভিডিও স্ট্রিম এবং সাব-লিংকগুলো জেনারেট হওয়ার জন্য পর্যাপ্ত সময় (৫০ সেকেন্ড) অপেক্ষা
-        writeStatus("Waiting 50 seconds for all resolution streams to trigger...");
-        await new Promise(resolve => setTimeout(resolve, 50000));
+        // ভিডিও প্লে শুরু হওয়ার পর রেজুলেশন ফেচ হওয়ার জন্য ৯০ সেকেন্ড সময় দেওয়া (যাতে সব সাব-লিংক চলে আসে)
+        writeStatus("Waiting 90 seconds for all resolution streams and chunks to trigger...");
+        
+        for (let i = 1; i <= 9; i++) {
+            await new Promise(resolve => setTimeout(resolve, 10000));
+            writeStatus(`Monitoring playback... (${i * 10}s elapsed, captured links: ${capturedLinks.size})`);
+            
+            // মাঝপথে স্ক্রিন স্ক্রোল বা টাচ করে প্লেয়ার সচল রাখা
+            await page.evaluate(() => {
+                window.scrollBy(0, 10);
+                window.scrollBy(0, -10);
+            }).catch(e => {});
+        }
+
         writeStatus("Extraction monitoring finished.");
 
     } catch (error) {
@@ -93,7 +108,7 @@ const fs = require('fs');
         await browser.close();
         writeStatus("Browser closed.");
 
-        // ক্যাচ করা সমস্ত লিংক সরাসরি স্ট্যাটাস ফাইলে সাজিয়ে লেখা
+        // ক্যাচ করা সমস্ত লিংক ফাইলে সাজিয়ে লেখা
         statusLog += `\n--- All Captured Stream Links (${capturedLinks.size}) ---\n`;
         if (capturedLinks.size === 0) {
             statusLog += "No stream links captured in this run.\n";
