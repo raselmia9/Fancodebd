@@ -1,16 +1,56 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
+const https = require('https');
+const http = require('http');
+
+// মাস্টার m3u8 লিংক থেকে ফেচ করে রেজুলেশন আলাদা করার ফাংশন
+async function parseMasterPlaylist(masterUrl) {
+    return new Promise((resolve) => {
+        const client = masterUrl.startsWith('https') ? https : http;
+        client.get(masterUrl, (res) => {
+            let data = '';
+            res.on('data', (chunk) => { data += chunk; });
+            res.on('end', () => {
+                let resolutions = [];
+                const lines = data.split('\n');
+                let currentRes = "Unknown";
+
+                for (let i = 0; i < lines.length; i++) {
+                    let line = lines[i].trim();
+                    if (line.includes('RESOLUTION=')) {
+                        const match = line.match(/RESOLUTION=(\d+x\d+)/);
+                        if (match) {
+                            currentRes = match[1];
+                        }
+                    } else if (line && !line.startsWith('#')) {
+                        // যদি লিংকটি রিলেটিভ পাথ হয়, তবে বেস ইউআরএল দিয়ে ফুল লিংক বানাতে হবে
+                        let fullUrl = line;
+                        if (!line.startsWith('http')) {
+                            const baseUrl = masterUrl.substring(0, masterUrl.lastIndexOf('/') + 1);
+                            fullUrl = baseUrl + line;
+                        }
+                        resolutions.push({ resolution: currentRes, url: fullUrl });
+                        currentRes = "Unknown";
+                    }
+                }
+                resolve(resolutions);
+            });
+        }).on('error', () => {
+            resolve([]);
+        });
+    });
+}
 
 (async () => {
-    let statusLog = `=== FanCode Extraction Status Log ===\nTime: ${new Date().toISOString()}\n\n`;
-    const capturedLinks = new Set();
+    let statusLog = `=== FanCode Resolution Extraction Log ===\nTime: ${new Date().toISOString()}\n\n`;
+    let masterM3u8Link = "";
 
     const writeStatus = (message) => {
         console.log(message);
         statusLog += message + '\n';
     };
 
-    writeStatus("Starting FanCode Link Extractor with Full Mobile Simulation...");
+    writeStatus("Starting FanCode Link Extractor...");
 
     const browser = await puppeteer.launch({
         headless: true,
@@ -24,10 +64,9 @@ const fs = require('fs');
         ]
     });
 
-    const context = await browser.createBrowserContext();
-    const page = await context.newPage();
+    const page = await browser.newPage();
 
-    // পারফেক্ট মোবাইল ভিউ এবং টাচ সাপোর্ট সেট করা
+    // মোবাইল ডিভাইসের ভিউপোর্ট ও ইউজার এজেন্ট সেট করা
     await page.setUserAgent('Mozilla/5.0 (Linux; Android 13; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36');
     await page.setViewport({
         width: 412,
@@ -37,17 +76,15 @@ const fs = require('fs');
         hasTouch: true
     });
 
-    // নেটওয়ার্ক রিকোয়েস্ট থেকে যেকোনো .m3u8 লিংক বা স্ট্রিম রিলেটেড রিকোয়েস্ট ধরা
+    // নেটওয়ার্ক রিকোয়েস্ট থেকে মাস্টার .m3u8 লিংক ক্যাপচার করা
     page.on('request', (request) => {
         const url = request.url();
         const lowerUrl = url.toLowerCase();
         
-        // .m3u8 এক্সটেনশনযুক্ত যেকোনো লিংক (মাস্টার বা রেজুলেশনভিত্তিক) ক্যাপচার করা
-        if (lowerUrl.includes('.m3u8')) {
-            if (!capturedLinks.has(url)) {
-                capturedLinks.add(url);
-                writeStatus(`[FOUND M3U8 LINK]: ${url}`);
-            }
+        // মাস্টার বা প্লেলিস্ট জাতীয় m3u8 লিংকগুলো টার্গেট করা
+        if (lowerUrl.includes('.m3u8') && !masterM3u8Link) {
+            masterM3u8Link = url;
+            writeStatus(`[FOUND MASTER M3U8 LINK]: ${url}`);
         }
     });
 
@@ -58,38 +95,34 @@ const fs = require('fs');
         await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
         writeStatus("Mobile page loaded successfully.");
 
-        // পেজ রেন্ডার হওয়ার জন্য সময় দেওয়া
         await new Promise(resolve => setTimeout(resolve, 6000));
 
-        // মোবাইল ভিউতে স্ক্রিন স্ক্রোল করা এবং ভিডিও প্লেয়ার ট্রিগার করা
+        // ভিডিও প্লেয়ার ট্রিগার করার জন্য স্ক্রোল এবং ক্লিক সিমুলেশন
         writeStatus("Simulating mobile touch and video play actions...");
         await page.evaluate(() => {
-            // পে একটু নিচে স্ক্রোল করা যাতে প্লেয়ার ফোকাসে আসে
             window.scrollBy(0, 300);
-
-            // ভিডিও এলিমেন্ট প্লে করা
             const videos = document.querySelectorAll('video');
             videos.forEach(v => {
                 v.muted = true;
                 v.play().catch(e => {});
             });
 
-            // ফ্যানকোডের মোবাইল ইন্টারফেসে প্লে বাটন বা ভিডিও কন্টেইনারে ক্লিক সিমুলেট করা
             const clickableElements = document.querySelectorAll('button, div, span, img');
             clickableElements.forEach(el => {
                 const text = el.innerText ? el.innerText.toLowerCase() : '';
                 if (text.includes('play') || text.includes('watch') || text.includes('live') || el.className.includes('play')) {
-                    try {
-                        el.click();
-                    } catch (err) {}
+                    try { el.click(); } catch (err) {}
                 }
             });
         });
 
-        // সমস্ত রেজুলেশন ও সাব-স্ট্রিম লোড হওয়ার জন্য পর্যাপ্ত সময় (৫০ সেকেন্ড) অপেক্ষা
-        writeStatus("Waiting 50 seconds to capture all resolution streams...");
-        await new Promise(resolve => setTimeout(resolve, 50000));
-        writeStatus("Extraction monitoring finished.");
+        // মাস্টার লিংক আসার জন্য কিছু সময় অপেক্ষা
+        writeStatus("Waiting for master stream link to trigger...");
+        let waitTime = 0;
+        while (!masterM3u8Link && waitTime < 40) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            waitTime++;
+        }
 
     } catch (error) {
         writeStatus(`[ERROR]: ${error.message}`);
@@ -97,14 +130,22 @@ const fs = require('fs');
         await browser.close();
         writeStatus("Browser closed.");
 
-        statusLog += `\n--- All Captured M3U8 Links (${capturedLinks.size}) ---\n`;
-        if (capturedLinks.size === 0) {
-            statusLog += "No .m3u8 links captured.\n";
+        if (masterM3u8Link) {
+            writeStatus("\nParsing Master Playlist for resolutions...");
+            const resolutionLinks = await parseMasterPlaylist(masterM3u8Link);
+
+            statusLog += `\n--- Master Link ---\n${masterM3u8Link}\n`;
+            statusLog += `\n--- All Resolution Links (${resolutionLinks.length}) ---\n`;
+            
+            if (resolutionLinks.length === 0) {
+                statusLog += "Could not parse resolution streams from master link.\n";
+            } else {
+                resolutionLinks.forEach((item, index) => {
+                    statusLog += `${index + 1}. [${item.resolution}]: ${item.url}\n`;
+                });
+            }
         } else {
-            let index = 1;
-            capturedLinks.forEach(link => {
-                statusLog += `${index++}. ${link}\n`;
-            });
+            statusLog += "\nNo .m3u8 master link captured in this run.\n";
         }
 
         fs.writeFileSync('status.txt', statusLog, 'utf-8');
