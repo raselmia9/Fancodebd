@@ -3,12 +3,25 @@ const fs = require('fs');
 const https = require('https');
 const http = require('http');
 
-// Node.js দিয়ে সরাসরি মাস্টার m3u8 ফাইল ফেচ ও পার্স করার ফাংশন
+// সঠিক ব্রাউজার হেডার্স সহ ব্যাকএন্ড থেকে মাস্টার m3u8 ফাইল ফেচ ও পার্স করার ফাংশন
 async function fetchAndParseMaster(masterUrl) {
     return new Promise((resolve) => {
-        const client = masterUrl.startsWith('https') ? https : http;
+        const urlObj = new URL(masterUrl);
+        const client = urlObj.protocol === 'https:' ? https : http;
 
-        client.get(masterUrl, (res) => {
+        const options = {
+            hostname: urlObj.hostname,
+            path: urlObj.pathname + urlObj.search,
+            method: 'GET',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 13; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
+                'Referer': 'https://www.fancode.com/',
+                'Origin': 'https://www.fancode.com',
+                'Accept': '*/*'
+            }
+        };
+
+        const req = client.request(options, (res) => {
             let data = '';
             res.on('data', (chunk) => { data += chunk; });
             res.on('end', () => {
@@ -23,7 +36,6 @@ async function fetchAndParseMaster(masterUrl) {
                 for (let i = 0; i < lines.length; i++) {
                     let line = lines[i].trim();
                     
-                    // রেজুলেশন ট্যাগ চেক করা (যেমন: RESOLUTION=854x480 বা শুধু হাইট)
                     if (line.includes('RESOLUTION=')) {
                         const match = line.match(/RESOLUTION=(\d+x\d+)/);
                         if (match) {
@@ -31,27 +43,29 @@ async function fetchAndParseMaster(masterUrl) {
                             currentRes = dims[1] ? dims[1] + 'p' : match[1];
                         }
                     } 
-                    // যদি লাইনটি কোনো লিংক বা ফাইল নাম হয় (যা দিয়ে শুরু হয়নি #)
                     else if (line && !line.startsWith('#')) {
                         let fullUrl = line;
                         if (!line.startsWith('http')) {
                             fullUrl = baseUrl + line;
                         }
                         
-                        // যদি লিংকে টোকেন বা কুয়েরি না থাকে, তবে মাস্টার লিংকের টোকেন যুক্ত করা
                         if (!fullUrl.includes('?hdnea=') && queryString) {
                             fullUrl += queryString;
                         }
 
                         resolutions.push({ resolution: currentRes, url: fullUrl });
-                        currentRes = "Unknown"; // রিসেট
+                        currentRes = "Unknown";
                     }
                 }
                 resolve(resolutions);
             });
-        }).on('error', (err) => {
+        });
+
+        req.on('error', (err) => {
             resolve([]);
         });
+
+        req.end();
     });
 }
 
@@ -140,7 +154,7 @@ async function fetchAndParseMaster(masterUrl) {
         writeStatus("Browser closed.");
 
         if (masterM3u8Link) {
-            writeStatus("\nFetching and parsing master playlist via backend...");
+            writeStatus("\nFetching and parsing master playlist with proper headers...");
             const resolutionLinks = await fetchAndParseMaster(masterM3u8Link);
 
             statusLog += `\n--- Master Link ---\n${masterM3u8Link}\n`;
