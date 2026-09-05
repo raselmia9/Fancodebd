@@ -1,0 +1,5 @@
+--- HLS Master Playlist Status Report ---
+
+HTTP Status Code: 403
+
+[X] Failed to fetch link. Status code: 403
