@@ -1,5 +1,59 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
+const https = require('https');
+const http = require('http');
+
+// Node.js দিয়ে সরাসরি মাস্টার m3u8 ফাইল ফেচ ও পার্স করার ফাংশন
+async function fetchAndParseMaster(masterUrl) {
+    return new Promise((resolve) => {
+        const client = masterUrl.startsWith('https') ? https : http;
+
+        client.get(masterUrl, (res) => {
+            let data = '';
+            res.on('data', (chunk) => { data += chunk; });
+            res.on('end', () => {
+                let resolutions = [];
+                const lines = data.split('\n');
+                let currentRes = "Unknown";
+
+                const queryIndex = masterUrl.indexOf('?');
+                const queryString = queryIndex !== -1 ? masterUrl.substring(queryIndex) : '';
+                const baseUrl = masterUrl.substring(0, masterUrl.lastIndexOf('/') + 1);
+
+                for (let i = 0; i < lines.length; i++) {
+                    let line = lines[i].trim();
+                    
+                    // রেজুলেশন ট্যাগ চেক করা (যেমন: RESOLUTION=854x480 বা শুধু হাইট)
+                    if (line.includes('RESOLUTION=')) {
+                        const match = line.match(/RESOLUTION=(\d+x\d+)/);
+                        if (match) {
+                            const dims = match[1].split('x');
+                            currentRes = dims[1] ? dims[1] + 'p' : match[1];
+                        }
+                    } 
+                    // যদি লাইনটি কোনো লিংক বা ফাইল নাম হয় (যা দিয়ে শুরু হয়নি #)
+                    else if (line && !line.startsWith('#')) {
+                        let fullUrl = line;
+                        if (!line.startsWith('http')) {
+                            fullUrl = baseUrl + line;
+                        }
+                        
+                        // যদি লিংকে টোকেন বা কুয়েরি না থাকে, তবে মাস্টার লিংকের টোকেন যুক্ত করা
+                        if (!fullUrl.includes('?hdnea=') && queryString) {
+                            fullUrl += queryString;
+                        }
+
+                        resolutions.push({ resolution: currentRes, url: fullUrl });
+                        currentRes = "Unknown"; // রিসেট
+                    }
+                }
+                resolve(resolutions);
+            });
+        }).on('error', (err) => {
+            resolve([]);
+        });
+    });
+}
 
 (async () => {
     let statusLog = `=== FanCode Resolution Extraction Log ===\nTime: ${new Date().toISOString()}\n\n`;
@@ -45,8 +99,6 @@ const fs = require('fs');
         }
     });
 
-    let resolutionLinks = [];
-
     try {
         const targetUrl = 'https://www.fancode.com/bd/football/tour/efl-championship-2026-27-19769090/matches/football-4247483/live-match-info';
         writeStatus(`Navigating to: ${targetUrl}`);
@@ -81,50 +133,6 @@ const fs = require('fs');
             waitTime++;
         }
 
-        // যদি মাস্টার লিংক পাওয়া যায়, তবে ব্রাউজারের ভেতর থেকেই ফেচ করে রেজুলেশন পার্স করা
-        if (masterM3u8Link) {
-            writeStatus("Parsing Master Playlist using browser fetch...");
-            
-            resolutionLinks = await page.evaluate(async (masterUrl) => {
-                try {
-                    const response = await fetch(masterUrl);
-                    const data = await response.text();
-                    
-                    let results = [];
-                    const lines = data.split('\n');
-                    let currentRes = "Unknown";
-
-                    const queryIndex = masterUrl.indexOf('?');
-                    const queryString = queryIndex !== -1 ? masterUrl.substring(queryIndex) : '';
-                    const baseUrl = masterUrl.substring(0, masterUrl.lastIndexOf('/') + 1);
-
-                    for (let i = 0; i < lines.length; i++) {
-                        let line = lines[i].trim();
-                        if (line.includes('RESOLUTION=')) {
-                            const match = line.match(/RESOLUTION=(\d+x\d+)/);
-                            if (match) {
-                                const dims = match[1].split('x');
-                                currentRes = dims[1] ? dims[1] + 'p' : match[1];
-                            }
-                        } else if (line && !line.startsWith('#')) {
-                            let fullUrl = line;
-                            if (!line.startsWith('http')) {
-                                fullUrl = baseUrl + line;
-                            }
-                            if (!fullUrl.includes('?id=') && queryString) {
-                                fullUrl += queryString;
-                            }
-                            results.push({ resolution: currentRes, url: fullUrl });
-                            currentRes = "Unknown";
-                        }
-                    }
-                    return results;
-                } catch (err) {
-                    return [];
-                }
-            }, masterM3u8Link);
-        }
-
     } catch (error) {
         writeStatus(`[ERROR]: ${error.message}`);
     } finally {
@@ -132,6 +140,9 @@ const fs = require('fs');
         writeStatus("Browser closed.");
 
         if (masterM3u8Link) {
+            writeStatus("\nFetching and parsing master playlist via backend...");
+            const resolutionLinks = await fetchAndParseMaster(masterM3u8Link);
+
             statusLog += `\n--- Master Link ---\n${masterM3u8Link}\n`;
             statusLog += `\n--- All Resolution Links (${resolutionLinks.length}) ---\n`;
             
