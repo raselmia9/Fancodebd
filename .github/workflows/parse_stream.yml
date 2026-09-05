@@ -1,11 +1,14 @@
-name: Parse M3U8 Stream
+name: Parse M3U8 Stream and Save Status
 
 on:
-  workflow_dispatch: # ম্যানুয়ালি গিটহাব ড্যাশবোর্ড থেকে রান করার জন্য
+  workflow_dispatch:
 
 jobs:
   run-parser:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # গিটহাবে ফাইল আপডেট বা কমিট করার পারমিশন
 
     steps:
     - name: Checkout Repository
@@ -24,3 +27,11 @@ jobs:
     - name: Run Python Script
       run: |
         python script.py
+
+    - name: Commit and Push Status File
+      run: |
+        git config --global user.name "GitHub Action Bot"
+        git config --global user.email "action@github.com"
+        git add status.txt
+        git commit -m "Update stream status output [skip ci]" || echo "No changes to commit"
+        git push
