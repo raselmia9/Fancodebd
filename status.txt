@@ -1,4 +1,4 @@
---- HLS Master Playlist Status Report ---
+--- HLS Master Playlist Status Report (HIN) ---
 
 HTTP Status Code: 403
 
