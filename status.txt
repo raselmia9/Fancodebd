@@ -1,19 +1,19 @@
 === FanCode Resolution Extraction Log ===
-Time: 2026-09-05T15:11:36.306Z
+Time: 2026-09-05T15:14:57.307Z
 
 Starting FanCode Link Extractor...
 Navigating to: https://www.fancode.com/bd/football/tour/efl-championship-2026-27-19769090/matches/football-4247483/live-match-info
+[FOUND MASTER M3U8 LINK]: https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788621419~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/*~id=57.151.121.194_4247483_ac756557-044e-42~data=57.151.121.194_4247483_free_175~hmac=145f51fbb58f684d00c57e3f9915edfa7a730a1acf705a9fb32f215ded1b6ce2&deviceId=undefined&advertiserId=undefined&ft_type=c1
 Mobile page loaded successfully.
-[FOUND MASTER M3U8 LINK]: https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788621217~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/*~id=74.235.126.69_4247483_32491c64-7356-47~data=74.235.126.69_4247483_free_175~hmac=179f8cb6e0a0356e3953d53c4d5403b3c595118ebb0ad1533cabfe82362501b0&deviceId=undefined&advertiserId=undefined&ft_type=c1
 Simulating mobile touch and video play actions...
 Waiting for master stream link to trigger...
 Browser closed.
 
-Parsing Master Playlist with cookies and headers...
+Parsing Master Playlist using token...
 
 --- Master Link ---
-https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788621217~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/*~id=74.235.126.69_4247483_32491c64-7356-47~data=74.235.126.69_4247483_free_175~hmac=179f8cb6e0a0356e3953d53c4d5403b3c595118ebb0ad1533cabfe82362501b0&deviceId=undefined&advertiserId=undefined&ft_type=c1
+https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788621419~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/*~id=57.151.121.194_4247483_ac756557-044e-42~data=57.151.121.194_4247483_free_175~hmac=145f51fbb58f684d00c57e3f9915edfa7a730a1acf705a9fb32f215ded1b6ce2&deviceId=undefined&advertiserId=undefined&ft_type=c1
 
 --- All Resolution Links (2) ---
-1. [Unknown]: https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788621217~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/Google-Edge-Cache: forbidden
-2. [Unknown]: https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788621217~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/Error: 7
+1. [Unknown]: https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788621419~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/Google-Edge-Cache: forbidden?hdnea=exp=1788621419~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/*~id=57.151.121.194_4247483_ac756557-044e-42~data=57.151.121.194_4247483_free_175~hmac=145f51fbb58f684d00c57e3f9915edfa7a730a1acf705a9fb32f215ded1b6ce2&deviceId=undefined&advertiserId=undefined&ft_type=c1
+2. [Unknown]: https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788621419~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/Error: 7?hdnea=exp=1788621419~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/*~id=57.151.121.194_4247483_ac756557-044e-42~data=57.151.121.194_4247483_free_175~hmac=145f51fbb58f684d00c57e3f9915edfa7a730a1acf705a9fb32f215ded1b6ce2&deviceId=undefined&advertiserId=undefined&ft_type=c1
