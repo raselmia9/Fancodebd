@@ -1,14 +1,6 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 
-// বিভিন্ন রিয়েল মোবাইল ও ডেস্কটপ ইউজার-এজেন্টের তালিকা, যাতে প্রতিবার আলাদা ডিভাইস মনে হয়
-const userAgents = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2.1 Safari/605.1.15',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0'
-];
-
 (async () => {
     let statusLog = `=== FanCode Extraction Status Log ===\nTime: ${new Date().toISOString()}\n\n`;
     const capturedLinks = new Set();
@@ -18,10 +10,7 @@ const userAgents = [
         statusLog += message + '\n';
     };
 
-    writeStatus("Starting FanCode Link Extractor with Stealth & Fresh Profile...");
-
-    // প্রতিবার রেন্ডম ইউজার-এজেন্ট সিলেক্ট করা (নতুন ডিভাইসের রূপ দেওয়ার জন্য)
-    const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+    writeStatus("Starting FanCode Link Extractor...");
 
     const browser = await puppeteer.launch({
         headless: true,
@@ -32,43 +21,26 @@ const userAgents = [
             '--disable-accelerated-2d-canvas',
             '--disable-gpu',
             '--window-size=1920,1080',
-            '--lang=en-US,en;q=0.9', // ভাষা ইংরেজি সেট করা
-            '--disable-blink-features=AutomationControlled' // বোট ডিটেকশন হাইড করার মূল ফ্ল্যাগ
+            '--accept-lang=en-US,en;q=0.9'
         ]
     });
 
-    // প্রতিবার একদম নতুন ও ফ্রেশ ব্রাউজার কনটেক্সট (কুকিজ ও ক্যাশ ছাড়া, যেন নতুন ডিভাইস হয়)
-    const context = await browser.createBrowserContext();
-    const page = await context.newPage();
+    const page = await browser.newPage();
 
-    // ইউজারের লোকেশন বাংলাদেশ (ঢাকা) হিসেবে টাইমজোন ও জিওলোকেশন সেট করা
-    await page.emulateTimezone('Asia/Dhaka');
-    await page.setGeolocation({ latitude: 23.8103, longitude: 90.4125 });
-    
-    // পারমিশন গ্র্যান্ট করা
-    const client = await page.target().createCDPSession();
-    await client.send('Browser.grantPermissions', {
-        origin: 'https://www.fancode.com',
-        permissions: ['geolocation']
-    });
+    // মোবাইল ডিভাইস বা রিয়েল ব্রাউজারের রূপ দেওয়া
+    await page.setUserAgent('Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36');
+    await page.setViewport({ width: 412, height: 915, isMobile: true });
 
-    await page.setUserAgent(randomUserAgent);
-    await page.setViewport({ width: 1920, height: 1080 });
-
-    // ব্রাউজারের অটোমেশন প্রপার্টি লুকানো (যাতে ফ্যানকোড বুঝতে না পারে এটি পাপেটিয়ার বট)
-    await page.evaluateOnNewDocument(() => {
-        Object.defineProperty(navigator, 'webdriver', { get: () => false });
-        window.navigator.chrome = { runtime: {} };
-        Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-    });
-
-    // নেটওয়ার্ক রিকোয়েস্ট মনিটর করা (.m3u8 খোঁজার জন্য)
+    // নেটওয়ার্কের প্রতিটি রিকোয়েস্ট মনিটর করা (শুধু .m3u8 নয়, ভিডিও রিলেটেড যেকোনো লিংক বা মাস্টার ফাইল ধরতে)
     page.on('request', (request) => {
         const url = request.url();
-        if (url.includes('.m3u8')) {
+        const lowerUrl = url.toLowerCase();
+        
+        // ফ্যানকোডের ভিডিও স্ট্রিম বা প্লেলিস্ট রিলেটেড লিংক ফিল্টার করা
+        if (lowerUrl.includes('.m3u8') || lowerUrl.includes('manifest') || lowerUrl.includes('playlist') || lowerUrl.includes('video')) {
             if (!capturedLinks.has(url)) {
                 capturedLinks.add(url);
-                writeStatus(`[FOUND M3U8 LINK]: ${url}`);
+                writeStatus(`[FOUND STREAM LINK]: ${url}`);
             }
         }
     });
@@ -76,30 +48,40 @@ const userAgents = [
     try {
         const targetUrl = 'https://www.fancode.com/bd/football/tour/efl-championship-2026-27-19769090/matches/football-4247483/live-match-info';
         writeStatus(`Navigating to: ${targetUrl}`);
-        writeStatus(`Using User-Agent: ${randomUserAgent}`);
 
         await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
-        writeStatus("Page loaded successfully. Waiting for video player elements...");
+        writeStatus("Page loaded successfully.");
 
-        // প্লেয়ার লোড হওয়ার জন্য কিছুটা সময় অপেক্ষা
-        await new Promise(resolve => setTimeout(resolve, 8000));
-
-        // ভিডিও প্লে করার জন্য স্ক্রিপ্ট ইনজেক্ট করা
-        await page.evaluate(() => {
-            const videoElement = document.querySelector('video');
-            if (videoElement) {
-                videoElement.play().catch(e => {});
-            }
-            
-            const playButtons = document.querySelectorAll('button[class*="play"], div[class*="play"], .vjs-big-play-button, [data-testid="play-button"]');
-            playButtons.forEach(btn => btn.click());
+        // পেজ সঠিকভাবে ভিউ হয়েছে কি না তা যাচাই করার জন্য হেডিং বা টিমের নাম বের করা
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        const matchTitle = await page.evaluate(() => {
+            // ফ্যানকোডের ম্যাচ টাইটেল বা টিম নাম খোঁজা
+            const titleElement = document.querySelector('h1') || document.querySelector('div[class*="match"]');
+            return titleElement ? titleElement.innerText : "Title not found";
         });
 
-        writeStatus("Simulated play action. Waiting for streams to trigger...");
+        writeStatus(`[VERIFICATION] Page Match Title Found: ${matchTitle.replace(/\n/g, ' - ')}`);
 
-        // লিংক ক্যাপচার হওয়ার জন্য পর্যাপ্ত সময় অপেক্ষা (যেমন: ৪৫ সেকেন্ড)
+        // ভিডিও প্লে করার বা ট্রিগার করার চেষ্টা
+        writeStatus("Attempting to trigger video player...");
+        await page.evaluate(() => {
+            const videoElements = document.querySelectorAll('video');
+            videoElements.forEach(v => v.play().catch(e => {}));
+
+            // সব ধরনের সম্ভাব্য প্লে বাটন বা ওভারলেতে ক্লিক করা
+            const clickables = document.querySelectorAll('button, div, span');
+            clickables.forEach(el => {
+                if (el.innerText && (el.innerText.toLowerCase().includes('watch') || el.innerText.toLowerCase().includes('play') || el.innerText.toLowerCase().includes('live'))) {
+                    try { el.click(); } catch(err) {}
+                }
+            });
+        });
+
+        // লিংকগুলোর জন্য ৪৫ সেকেন্ড অপেক্ষা করা
+        writeStatus("Waiting for video stream requests to capture...");
         await new Promise(resolve => setTimeout(resolve, 45000));
-        writeStatus("Extraction period finished.");
+        writeStatus("Extraction process completed.");
 
     } catch (error) {
         writeStatus(`[ERROR]: ${error.message}`);
@@ -109,7 +91,7 @@ const userAgents = [
 
         statusLog += `\n--- Summary of All Captured Links (${capturedLinks.size}) ---\n`;
         if (capturedLinks.size === 0) {
-            statusLog += "No .m3u8 links captured in this run.\n";
+            statusLog += "No video links captured in this run. (Check if geo-block or login is required)\n";
         } else {
             let index = 1;
             capturedLinks.forEach(link => {
