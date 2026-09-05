@@ -1,19 +1,14 @@
 === FanCode Resolution Extraction Log ===
-Time: 2026-09-05T15:27:11.488Z
+Time: 2026-09-05T15:30:54.877Z
 
-Starting FanCode Link Extractor...
+Starting FanCode Direct Stream Extractor...
 Navigating to: https://www.fancode.com/bd/football/tour/efl-championship-2026-27-19769090/matches/football-4247483/live-match-info
 Mobile page loaded successfully.
-[FOUND MASTER M3U8 LINK]: https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788622152~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/*~id=52.154.20.193_4247483_07ec6ec0-1495-4b~data=52.154.20.193_4247483_free_175~hmac=1634ff0ce84f19710a32d1ea71d6ef88032add877f42a5d245ea7e5f26505e54&deviceId=undefined&advertiserId=undefined&ft_type=c1
+[FOUND STREAM LINK]: https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788622376~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/*~id=172.214.97.229_4247483_a47cf46e-b9d3-4b~data=172.214.97.229_4247483_free_175~hmac=780f4fb6234f057385544175e46f7e4ac649a49f71c9c01f2b9622c09e610363&deviceId=undefined&advertiserId=undefined&ft_type=c1
 Simulating mobile touch and video play actions...
-Waiting for master stream link to trigger...
+Waiting 50 seconds for all resolution streams to trigger...
+Extraction monitoring finished.
 Browser closed.
 
-Fetching and parsing master playlist with proper headers...
-
---- Master Link ---
-https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788622152~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/*~id=52.154.20.193_4247483_07ec6ec0-1495-4b~data=52.154.20.193_4247483_free_175~hmac=1634ff0ce84f19710a32d1ea71d6ef88032add877f42a5d245ea7e5f26505e54&deviceId=undefined&advertiserId=undefined&ft_type=c1
-
---- All Resolution Links (2) ---
-1. [Unknown]: https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788622152~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/Google-Edge-Cache: forbidden
-2. [Unknown]: https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788622152~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/Error: 7
+--- All Captured Stream Links (1) ---
+1. https://bd-mc-flive.fancode.com/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/index.m3u8?hdnea=exp=1788622376~acl=/mumbai/4247483_english_hls_492f648b943805_1ta-di_h264/*~id=172.214.97.229_4247483_a47cf46e-b9d3-4b~data=172.214.97.229_4247483_free_175~hmac=780f4fb6234f057385544175e46f7e4ac649a49f71c9c01f2b9622c09e610363&deviceId=undefined&advertiserId=undefined&ft_type=c1
