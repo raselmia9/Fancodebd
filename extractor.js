@@ -3,31 +3,12 @@ const fs = require('fs');
 const https = require('https');
 const http = require('http');
 
-// ব্রাউজারের কুকিজ ও হেডার সহ মাস্টার প্লেলিস্ট ফেচ করার ফাংশন
-async function parseMasterPlaylist(masterUrl, cookies, userAgent) {
+// মাস্টার m3u8 লিংক এবং এর ভেতরের টোকেন ব্যবহার করে রেজুলেশন আলাদা করার ফাংশন
+async function parseMasterPlaylist(masterUrl) {
     return new Promise((resolve) => {
-        const urlObj = new URL(masterUrl);
-        const client = urlObj.protocol === 'https:' ? https : http;
+        const client = masterUrl.startsWith('https') ? https : http;
 
-        // কুকিজ ফরম্যাট করা
-        let cookieString = '';
-        if (cookies && cookies.length > 0) {
-            cookieString = cookies.map(c => `${c.name}=${c.value}`).join('; ');
-        }
-
-        const options = {
-            hostname: urlObj.hostname,
-            path: urlObj.pathname + urlObj.search,
-            method: 'GET',
-            headers: {
-                'User-Agent': userAgent,
-                'Referer': 'https://www.fancode.com/',
-                'Origin': 'https://www.fancode.com',
-                ...(cookieString ? { 'Cookie': cookieString } : {})
-            }
-        };
-
-        const req = client.request(options, (res) => {
+        client.get(masterUrl, (res) => {
             let data = '';
             res.on('data', (chunk) => { data += chunk; });
             res.on('end', () => {
@@ -35,42 +16,45 @@ async function parseMasterPlaylist(masterUrl, cookies, userAgent) {
                 const lines = data.split('\n');
                 let currentRes = "Unknown";
 
+                // মাস্টার লিংক থেকে কুয়েরি স্ট্রিং বা টোকেন অংশ আলাদা করা (যেমন: ?hdnea=...)
+                const queryIndex = masterUrl.indexOf('?');
+                const queryString = queryIndex !== -1 ? masterUrl.substring(queryIndex) : '';
+                const baseUrl = masterUrl.substring(0, masterUrl.lastIndexOf('/') + 1);
+
                 for (let i = 0; i < lines.length; i++) {
                     let line = lines[i].trim();
                     if (line.includes('RESOLUTION=')) {
                         const match = line.match(/RESOLUTION=(\d+x\d+)/);
                         if (match) {
-                            // হাইট বা রেজুলেশন বের করা (যেমন: 720p, 1080p)
                             const dims = match[1].split('x');
                             currentRes = dims[1] ? dims[1] + 'p' : match[1];
                         }
                     } else if (line && !line.startsWith('#')) {
                         let fullUrl = line;
                         if (!line.startsWith('http')) {
-                            const baseUrl = masterUrl.substring(0, masterUrl.lastIndexOf('/') + 1);
                             fullUrl = baseUrl + line;
                         }
+                        
+                        // যদি লিংকে আগে থেকেই কুয়েরি না থাকে, তবে মাস্টার লিংকের টোকেনটি যুক্ত করে দেওয়া
+                        if (!fullUrl.includes('?id=') && queryString) {
+                            fullUrl += queryString;
+                        }
+
                         resolutions.push({ resolution: currentRes, url: fullUrl });
                         currentRes = "Unknown";
                     }
                 }
                 resolve(resolutions);
             });
-        });
-
-        req.on('error', (e) => {
+        }).on('error', () => {
             resolve([]);
         });
-
-        req.end();
     });
 }
 
 (async () => {
     let statusLog = `=== FanCode Resolution Extraction Log ===\nTime: ${new Date().toISOString()}\n\n`;
     let masterM3u8Link = "";
-    let capturedCookies = [];
-    const userAgentString = 'Mozilla/5.0 (Linux; Android 13; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36';
 
     const writeStatus = (message) => {
         console.log(message);
@@ -93,7 +77,7 @@ async function parseMasterPlaylist(masterUrl, cookies, userAgent) {
 
     const page = await browser.newPage();
 
-    await page.setUserAgent(userAgentString);
+    await page.setUserAgent('Mozilla/5.0 (Linux; Android 13; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36');
     await page.setViewport({
         width: 412,
         height: 915,
@@ -102,7 +86,6 @@ async function parseMasterPlaylist(masterUrl, cookies, userAgent) {
         hasTouch: true
     });
 
-    // নেটওয়ার্ক রিকোয়েস্ট থেকে মাস্টার .m3u8 লিংক ক্যাপচার
     page.on('request', (request) => {
         const url = request.url();
         const lowerUrl = url.toLowerCase();
@@ -122,7 +105,6 @@ async function parseMasterPlaylist(masterUrl, cookies, userAgent) {
 
         await new Promise(resolve => setTimeout(resolve, 6000));
 
-        // ভিডিও প্লেয়ার ট্রিগার করা
         writeStatus("Simulating mobile touch and video play actions...");
         await page.evaluate(() => {
             window.scrollBy(0, 300);
@@ -148,9 +130,6 @@ async function parseMasterPlaylist(masterUrl, cookies, userAgent) {
             waitTime++;
         }
 
-        // ব্রাউজারের কু্যাকি সংগ্রহ করা
-        capturedCookies = await page.cookies();
-
     } catch (error) {
         writeStatus(`[ERROR]: ${error.message}`);
     } finally {
@@ -158,14 +137,14 @@ async function parseMasterPlaylist(masterUrl, cookies, userAgent) {
         writeStatus("Browser closed.");
 
         if (masterM3u8Link) {
-            writeStatus("\nParsing Master Playlist with cookies and headers...");
-            const resolutionLinks = await parseMasterPlaylist(masterM3u8Link, capturedCookies, userAgentString);
+            writeStatus("\nParsing Master Playlist using token...");
+            const resolutionLinks = await parseMasterPlaylist(masterM3u8Link);
 
             statusLog += `\n--- Master Link ---\n${masterM3u8Link}\n`;
             statusLog += `\n--- All Resolution Links (${resolutionLinks.length}) ---\n`;
             
             if (resolutionLinks.length === 0) {
-                statusLog += "Could not parse resolution streams (Access Forbidden or format mismatch).\n";
+                statusLog += "Could not parse resolution streams.\n";
             } else {
                 resolutionLinks.forEach((item, index) => {
                     statusLog += `${index + 1}. [${item.resolution}]: ${item.url}\n`;
