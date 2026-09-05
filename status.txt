@@ -1,0 +1,11 @@
+=== FanCode Extraction Status Log ===
+Time: 2026-09-05T14:33:09.427Z
+
+Starting FanCode Link Extractor...
+Navigating to: https://www.fancode.com/bd/football/tour/efl-championship-2026-27-19769090/matches/football-4247483/live-match-info
+Page loaded. Waiting for video streams to trigger...
+Extraction waiting period completed successfully.
+Browser closed.
+
+--- Summary of All Captured Links (0) ---
+No .m3u8 links captured in this run.
