@@ -44,9 +44,28 @@ const fs = require('fs');
         writeStatus(`Navigating to: ${targetUrl}`);
 
         await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
-        writeStatus("Page loaded. Waiting for video streams to trigger...");
+        writeStatus("Page loaded. Looking for video play button...");
 
-        await new Promise(resolve => setTimeout(resolve, 30000));
+        // অতিরিক্ত সময় অপেক্ষা করা যাতে পেজ ও প্লেয়ার পুরোপুরি রেডি হয়
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        // ভিডিও প্লে করার জন্য স্ক্রিপ্ট (ফ্যানকোডের প্লে বা ভিডিও এলিমেন্ট ট্রিগার করা)
+        await page.evaluate(() => {
+            // ভিডিও এলিমেন্ট বা প্লে বোতামে ক্লিক করার চেষ্টা
+            const videoElement = document.querySelector('video');
+            if (videoElement) {
+                videoElement.play().catch(e => console.log(e));
+            }
+            
+            // কমন প্লে বাটনগুলো খুঁজে ক্লিক করা
+            const playButtons = document.querySelectorAll('button[class*="play"], div[class*="play"], .vjs-big-play-button');
+            playButtons.forEach(btn => btn.click());
+        });
+
+        writeStatus("Play command executed. Waiting for video streams to trigger...");
+
+        // লিংক জেনারেট হওয়ার জন্য এবার পর্যাপ্ত সময় অপেক্ষা (যেমন: ৪০ সেকেন্ড)
+        await new Promise(resolve => setTimeout(resolve, 40000));
         writeStatus("Extraction waiting period completed successfully.");
 
     } catch (error) {
